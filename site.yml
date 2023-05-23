@@ -1,0 +1,15 @@
+---
+
+- hosts: all
+  become: true
+  pre_tasks:
+
+  - name: Fix dpkg 
+    shell: dpkg --configure -a
+
+- hosts: controller
+  become: true
+  roles:
+    - KEYSTONE
+    - GLANCE
+    - NOVA
