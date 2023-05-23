@@ -1,0 +1,63 @@
+- name: Install dependencies
+  apt:
+    name:
+      - apache2
+      - apache2-utils
+      - python3-dev
+      - python3-pip
+      - libssl-dev
+      - libmysqlclient-dev
+      - libexpat1
+      - ssl-cert
+    state: present
+
+- name: Installing Keystone
+  apt:
+    name: keystone
+    state: present
+
+- name: Configure Keystone database access
+  become: true
+  replace:
+    path: /etc/keystone/keystone.conf
+    regexp: '^connection = .*'
+    replace: 'connection = mysql+pymysql://keystone:KEYSTONE_DBPASS@controller/keystone'
+
+- name: Configure Fernet token provider
+  become: true
+  replace:
+    path: /etc/keystone/keystone.conf
+    regexp: '^#provider = .*'
+    replace: 'provider = fernet'
+
+#- name: Populate the Identity service database
+#  become: true
+#  shell: |
+#          sudo -s /bin/sh -c "keystone-manage db_synch" keystone
+
+- name: Initialize Fernet key repositories
+  shell: keystone-manage fernet_setup --keystone-user keystone --keystone-group keystone
+
+- name: Initialize credential key repositories
+  shell: keystone-manage credential_setup --keystone-user keystone --keystone-group keystone
+
+- name: Configure Apache ServerName
+  replace:
+    path: /etc/apache2/apache2.conf
+    regexp: '^ServerName .*'
+    replace: "ServerName controller"
+
+- name: Restart Apache service
+  service:
+    name: apache2
+    state: restarted
+
+- name: Configure administrative account
+  shell: |
+          export OS_USERNAME=admin
+          export OS_PASSWORD=ADMIN_PASS
+          export OS_PROJECT_NAME=admin
+          export OS_USER_DOMAIN_NAME=Default
+          export OS_PROJECT_DOMAIN_NAME=Default
+          export OS_AUTH_URL=http://controller:5000/v3
+          export OS_IDENTITY_API_VERSION=3

@@ -1,0 +1,81 @@
+- name: Installing Nova
+  apt:
+    name: nova-compute
+
+- name: Configuring RabbitMQ Message Queue access
+  copy:
+    dest: /etc/nova/nova.conf
+    content: |
+      [DEFAULT]
+      tranport_url = rabbit://openstack:1234@controller
+      my_ip = 192.168.56.102
+
+- name: Configuring Identity Service Access
+  copy:
+    dest: /etc/nova/nova.conf
+    content: |
+      [api]
+      auth_strategy = keystone
+      [keystone_authtoken]
+      www_authenticate_uri = http://controller:5000/
+      auth_url = http://controller:5000/
+      memcached_servers = controller:11211
+      auth_type = password
+      project_domain_name: Default
+      user_domain_name = Default
+      project_name = service
+      username = nova
+      password = 1234
+
+- name: Enable and Configure remote console access
+  copy:
+    dest: /etc/nova/nova.conf
+    content: |
+      [vnc]
+      enabled = true
+      server_listen = 0.0.0.0
+      server_proxyclient_address = $my_ip
+      novncproxy_base_url = http://controller:6080/vnc_auto.html
+
+- name: Configure the location of the image service API
+  copy:
+    dest: /etc/nova/nova.conf
+    content: |
+      [glance]
+      api_servers = http://controller:9292
+
+- name: Configure the lock path
+  copy:
+    dest: /etc/nova/nova.conf
+    content: |
+      [solo_currency]
+      lock_path = /var/lib/nova/tmp
+
+- name: Configure the placement API
+  copy:
+    dest: /etc/nova/nova.conf
+    content: |
+      [placement]
+      region_name = RegionOne
+      project_domain_name = Default
+      project_name = service
+      auth_type = password
+      user_domain_name = Default
+      auth_url = http://controller:5000/v3
+      username = placement
+      password = 1234
+
+- name: Configuring to make the computer node to support hardware acceleration
+  copy:
+    dest: /etc/nova/nova-compute.conf
+    content: |
+      [libvirt]
+      virt_type = qemu
+
+- name: Restarting the computer service
+  shell: service nova-compute restart
+
+- block:
+  - name: Verifying if already running and active the nova-compute.
+    shell: systemctl status nova-compute
+    register: novacompute_service
