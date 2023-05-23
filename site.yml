@@ -10,6 +10,6 @@
 - hosts: controller
   become: true
   roles:
-    - KEYSTONE
-    - GLANCE
-    - NOVA
+    - keystone
+    - glance
+    - nova
